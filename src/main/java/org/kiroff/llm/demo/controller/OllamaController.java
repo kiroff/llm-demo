@@ -1,0 +1,135 @@
+package org.kiroff.llm.demo.controller;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.ollama.OllamaChatModel;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/ollama")
+@CrossOrigin(origins = "*")
+@Slf4j
+public class OllamaController {
+
+    private final EmbeddingModel embeddingModel;
+    private final ChatClient chatClient;
+    private final ChatMemory chatMemory = MessageWindowChatMemory.builder().build();
+
+    public OllamaController(OllamaChatModel chatModel, @Qualifier("mistralAiEmbeddingModel") EmbeddingModel embeddingModel) {
+        this.chatClient = ChatClient.builder(chatModel).build();
+        this.embeddingModel = embeddingModel;
+    }
+
+    @GetMapping("/embeddings")
+    public float[] getEmbeddings(
+            @RequestParam(name = "message", required = true) String message,
+            @RequestParam(name = "conversationId", required = false) String conversationId) {
+
+        return embeddingModel.embed(message);
+    }
+
+    @GetMapping("/questions/{message}")
+    public ResponseEntity<String> getAnswer(
+            @PathVariable("message") String message,
+            @RequestParam(name = "conversationId", required = false) String conversationId) {
+
+        return respond(conversationId, message);
+    }
+
+
+    @GetMapping("/recommedations")
+    public ResponseEntity<String> getAnswer(
+            @RequestParam("city") String city,
+            @RequestParam("year") String year,
+            @RequestParam(name = "conversationId", required = false) String conversationId) {
+
+        String template = """
+                Намери всички активни счетоводни фирми в {city}, които са работили през {year}. За всяка фирма предостави:
+                
+                име на фирмата;
+                ЕИК (ако е публично достъпен);
+                адрес;
+                телефон и имейл;
+                уебсайт;
+                година на регистрация;
+                основни счетоводни услуги;
+                брой служители (ако е наличен);
+                клиентски отзиви и рейтинг;
+                информация дали фирмата е активна към {year}.
+                Подреди резултатите в таблица и включи източници на информация.
+                """;
+        PromptTemplate promptTemplate = PromptTemplate.builder()
+                .template(template)
+                .variables(Map.of("year", year, "city", city))
+                .build();
+
+        Prompt prompt = promptTemplate.create();
+        return respond(conversationId, prompt);
+
+    }
+
+    private ResponseEntity<String> respond(String conversationId, String message)
+    {
+        final String effectiveConversationId = Optional.ofNullable(conversationId).orElseGet(() -> UUID.randomUUID().toString());
+
+        final ChatResponse res = chatClient.prompt()
+                .messages(chatMemory.get(effectiveConversationId))
+                .user(message)
+                .call()
+                .chatResponse();
+
+        if (res == null || res.getResult() == null) {
+            return ResponseEntity.noContent().build();
+        }
+
+        persistConversation(effectiveConversationId, message, res.getResult().getOutput());
+
+        log.info("Tokens used: {}", res.getMetadata().getUsage().getTotalTokens());
+
+        return ResponseEntity.ok(res.getResult().getOutput().getText());
+    }
+
+    private ResponseEntity<String> respond(String conversationId, Prompt prompt)
+    {
+        final String effectiveConversationId = Optional.ofNullable(conversationId).orElseGet(() -> UUID.randomUUID().toString());
+
+        final ChatResponse res = chatClient.prompt(prompt)
+                .messages(chatMemory.get(effectiveConversationId))
+                .call()
+                .chatResponse();
+
+        if (res == null || res.getResult() == null) {
+            return ResponseEntity.noContent().build();
+        }
+
+        persistConversation(effectiveConversationId, prompt.getContents(), res.getResult().getOutput());
+
+        log.info("Tokens used: {}", res.getMetadata().getUsage().getTotalTokens());
+
+        return ResponseEntity.ok(res.getResult().getOutput().getText());
+    }
+
+    private void persistConversation(String conversationId, String userText, AssistantMessage assistantMessage) {
+        chatMemory.add(conversationId, new UserMessage(userText));
+        chatMemory.add(conversationId, assistantMessage);
+    }
+}

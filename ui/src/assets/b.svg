@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+        viewBox="0 0 1024 1024"
+        width="1024"
+        height="1024"
+        version="1.1"
+        id="svg3"
+        sodipodi:docname="Б.svg"
+        inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+        xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+        xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+        xmlns="http://www.w3.org/2000/svg"
+        xmlns:svg="http://www.w3.org/2000/svg">
+    <defs
+            id="defs3" />
+    <sodipodi:namedview
+            id="namedview3"
+            pagecolor="#ffffff"
+            bordercolor="#999999"
+            borderopacity="1"
+            inkscape:showpageshadow="0"
+            inkscape:pageopacity="0"
+            inkscape:pagecheckerboard="0"
+            inkscape:deskcolor="#d1d1d1"
+            inkscape:zoom="0.77441406"
+            inkscape:cx="512"
+            inkscape:cy="512"
+            inkscape:window-width="1932"
+            inkscape:window-height="1021"
+            inkscape:window-x="0"
+            inkscape:window-y="0"
+            inkscape:window-maximized="1"
+            inkscape:current-layer="svg3" />
+    <rect
+            width="1024"
+            height="1024"
+            fill="none"
+            id="rect1" />
+    <g
+            fill="none"
+            stroke="black"
+            stroke-width="34"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            id="g3">
+        <path
+                d="M150 90 L170 940"
+                id="path1" />
+        <path
+                d="M150 125 C220 140, 300 130, 390 128"
+                id="path2" />
+        <path
+                d="M170 650              C300 500, 600 470, 790 560              C920 620, 920 840, 760 920              C620 990, 360 965, 170 950"
+                id="path3" />
+    </g>
+    <ellipse
+            cx="921.51703"
+            cy="935.66077"
+            fill="black"
+            id="circle3"
+            rx="24.126104"
+            ry="22.834805"
+            style="stroke-width:0.838271" />
+</svg>

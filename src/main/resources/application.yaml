@@ -1,0 +1,22 @@
+server:
+  port: 8181
+
+spring:
+  application:
+    name: demo
+  main:
+    banner-mode: off
+  ai:
+    mistralai:
+      api-key: ${MISTRALAI_API_KEY}
+    ollama:
+      chat:
+        model: ${OLLAMA_MODEL:llama3}
+      embedding:
+        model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY}
+    openai:
+      api-key: ${OPENAI_API_KEY}
+    claude:
+      api-key: ${CLAUDE_API_KEY}
