@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { Send, User, Loader2 } from 'lucide-react';
 import botSvg from './assets/b.svg';
 
-const API_BASE_URL = 'http://localhost:8181/api/ollama';
+const API_BASE_URL = '/api/ollama';
 
 const CustomIcon = ({ className, size = 24 }) => (
   <img 
@@ -18,6 +19,7 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState(() => Math.random().toString(36).substring(7));
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -32,24 +34,87 @@ function App() {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    const userMessage = { text: input, isBot: false, timestamp: new Date() };
+    const userMessage = { id: Date.now() + '-user', text: input, isBot: false, timestamp: new Date() };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
 
+    const botMessageId = Date.now() + '-bot';
+    setMessages((prev) => [...prev, { id: botMessageId, text: '', isBot: true, timestamp: new Date() }]);
+
     try {
-      const response = await axios.get(`${API_BASE_URL}/questions/${encodeURIComponent(input)}`);
-      const botMessage = { text: response.data, isBot: true, timestamp: new Date() };
-      setMessages((prev) => [...prev, botMessage]);
+      const response = await fetch(`${API_BASE_URL}/stream?question=${encodeURIComponent(input)}&conversationId=${conversationId}`);
+      
+      if (!response.ok) throw new Error('Network response was not ok');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedText = '';
+      let partialLine = '';
+      let hasReceivedData = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = (partialLine + chunk).split('\n');
+        partialLine = lines.pop(); // The last element might be incomplete
+
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            try {
+              const jsonData = JSON.parse(line.substring(5).trim());
+              if (jsonData.chunk) {
+                accumulatedText += jsonData.chunk;
+                hasReceivedData = true;
+                setMessages((prev) => 
+                  prev.map((msg) => 
+                    msg.id === botMessageId ? { ...msg, text: accumulatedText } : msg
+                  )
+                );
+              }
+            } catch (e) {
+              console.error('Error parsing chunk:', e, 'Line:', line);
+            }
+          }
+        }
+      }
+      
+      // Handle any remaining partial line
+      if (partialLine.startsWith('data:')) {
+          try {
+              const jsonData = JSON.parse(partialLine.substring(5).trim());
+              if (jsonData.chunk) {
+                  accumulatedText += jsonData.chunk;
+                  hasReceivedData = true;
+                  setMessages((prev) =>
+                      prev.map((msg) =>
+                          msg.id === botMessageId ? { ...msg, text: accumulatedText } : msg
+                      )
+                  );
+              }
+          } catch (e) {
+              // Ignore incomplete JSON at the end
+          }
+      }
+
+      if (!hasReceivedData) {
+        setMessages((prev) => 
+          prev.map((msg) => 
+            msg.id === botMessageId ? { ...msg, text: 'No response from model.' } : msg
+          )
+        );
+      }
     } catch (error) {
       console.error('Error fetching response:', error);
-      const errorMessage = { 
-        text: 'Sorry, I encountered an error. Is the Bobson server running?', 
-        isBot: true, 
-        isError: true,
-        timestamp: new Date() 
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => 
+        prev.map((msg) => 
+          msg.id === botMessageId 
+            ? { ...msg, text: 'Sorry, I encountered an error. Is the server running?', isError: true } 
+            : msg
+        )
+      );
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +139,7 @@ function App() {
 
         {messages.map((msg, index) => (
           <div
-            key={index}
+            key={msg.id || index}
             className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}
           >
             <div
@@ -87,7 +152,14 @@ function App() {
               <div className="mt-1">
                 {msg.isBot ? <CustomIcon size={18} /> : <User size={18} />}
               </div>
-              <div className="whitespace-pre-wrap break-words">{msg.text}</div>
+              {msg.isBot ? (
+                <div 
+                  className="markdown-content wrap-break-word"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(msg.text)) }}
+                />
+              ) : (
+                <div className="whitespace-pre-wrap wrap-break-word">{msg.text}</div>
+              )}
             </div>
           </div>
         ))}

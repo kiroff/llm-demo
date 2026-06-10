@@ -1,9 +1,14 @@
 server:
   port: 8181
+  http2:
+    enabled: true
 
 spring:
   application:
     name: demo
+  threads:
+    virtual:
+      enabled: true
   main:
     banner-mode: off
   ai:
@@ -20,3 +25,12 @@ spring:
       api-key: ${OPENAI_API_KEY}
     claude:
       api-key: ${CLAUDE_API_KEY}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always

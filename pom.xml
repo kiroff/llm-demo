@@ -27,7 +27,7 @@
     </scm>
     <properties>
         <java.version>25</java.version>
-        <java.args>--sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED -Dnet.bytebuddy.experimental=true</java.args>
+        <java.args>--sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED -Dnet.bytebuddy.experimental=true --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED -XX:+IgnoreUnrecognizedVMOptions -XX:+UnlockDiagnosticVMOptions</java.args>
         <spring-boot.version>4.1.0-RC1</spring-boot.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -68,6 +68,10 @@
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-anthropic</artifactId>
         </dependency>
@@ -87,6 +91,7 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-mistral-ai</artifactId>
         </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -104,6 +109,10 @@
             <artifactId>spring-boot-devtools</artifactId>
             <scope>runtime</scope>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
     </dependencies>
 
@@ -123,18 +132,26 @@
                         </exclude>
                     </excludes>
                 </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <goals>-->
+<!--                            <goal>repackage</goal>-->
+<!--                        </goals>-->
+<!--                    </execution>-->
+<!--                </executions>-->
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-J--add-opens=java.base/java.lang=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=java.base/sun.misc=ALL-UNNAMED</arg>
+                        <arg>-J-XX:+IgnoreUnrecognizedVMOptions</arg>
+                        <arg>-J-XX:+UnlockDiagnosticVMOptions</arg>
+                    </compilerArgs>
+                </configuration>
                 <executions>
                     <execution>
                         <id>default-compile</id>
